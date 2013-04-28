@@ -43,13 +43,14 @@ import pickle
 import sys
 import traceback
 import types
-import wsgiref.handlers
+import jinja2
 
 from google.appengine.api import users
 from google.appengine.ext import ndb
 import webapp2
-from google.appengine.ext.webapp import template
 
+
+jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader('shell/templates'))
 
 # Set to True if stack traces should be shown in the browser, etc.
 _DEBUG = True
@@ -113,13 +114,13 @@ class Session(ndb.Model):
       name: the name of the global to remove
       value: any picklable value
     """
-    blob = db.Blob(pickle.dumps(value))
+    blob = ndb.Blob(pickle.dumps(value))
 
     if name in self.global_names:
       index = self.global_names.index(name)
       self.globals[index] = blob
     else:
-      self.global_names.append(db.Text(name))
+      self.global_names.append(ndb.Text(name))
       self.globals.append(blob)
 
     self.remove_unpicklable_name(name)
@@ -150,12 +151,12 @@ class Session(ndb.Model):
       statement: string, the statement that created new unpicklable global(s).
       names: list of strings; the names of the globals created by the statement.
     """
-    self.unpicklables.append(db.Text(statement))
+    self.unpicklables.append(ndb.Text(statement))
 
     for name in names:
       self.remove_global(name)
       if name not in self.unpicklable_names:
-        self.unpicklable_names.append(db.Text(name))
+        self.unpicklable_names.append(ndb.Text(name))
 
   def remove_unpicklable_name(self, name):
     """Removes a name from the list of unpicklable names, if it exists.
@@ -167,7 +168,7 @@ class Session(ndb.Model):
       self.unpicklable_names.remove(name)
 
 
-class FrontPageHandler(webapp.RequestHandler):
+class FrontPageHandler(webapp2.RequestHandler):
   """Creates a new session and renders the shell.html template.
   """
 
@@ -179,11 +180,10 @@ class FrontPageHandler(webapp.RequestHandler):
     else:
       # create a new session
       session = Session()
-      session.unpicklables = [db.Text(line) for line in INITIAL_UNPICKLABLES]
+      session.unpicklables = [ndb.Text(line) for line in INITIAL_UNPICKLABLES]
       session_key = session.put()
 
-    template_file = os.path.join(os.path.dirname(__file__), 'templates',
-                                 'shell.html')
+
     session_url = '/?session=%s' % session_key
     vars = { 'server_software': os.environ['SERVER_SOFTWARE'],
              'python_version': sys.version,
@@ -192,11 +192,13 @@ class FrontPageHandler(webapp.RequestHandler):
              'login_url': users.create_login_url(session_url),
              'logout_url': users.create_logout_url(session_url),
              }
-    rendered = template.render(template_file, vars, debug=_DEBUG)
+
+    template = jinja_environment.get_template("shell.html")
+    rendered = template.render(vars, debug=_DEBUG)
     self.response.out.write(unicode(rendered))
 
 
-class StatementHandler(webapp.RequestHandler):
+class StatementHandler(webapp2.RequestHandler):
   """Evaluates a python statement in a given session and returns the result.
   """
 
@@ -298,12 +300,8 @@ class StatementHandler(webapp.RequestHandler):
     session.put()
 
 
-def main():
-  application = webapp.WSGIApplication(
-    [('/', FrontPageHandler),
-     ('/shell.do', StatementHandler)], debug=_DEBUG)
-  wsgiref.handlers.CGIHandler().run(application)
+app = webapp2.WSGIApplication([
+  ('/shell', FrontPageHandler),
+  ('/shell/shell.do', StatementHandler)],
+debug=_DEBUG)
 
-
-if __name__ == '__main__':
-  main()

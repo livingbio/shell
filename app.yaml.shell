@@ -1,19 +1,15 @@
-application: shell
-version: 1
-
-runtime: python
-api_version: 1
+libraries:
+- name: jinja2
+  version: "2.6"
 
 handlers:
-- url: /static
-  static_dir: static
+- url: /shell/static
+  static_dir: /shell/static
   expiration: 1d
-
-- url: /remote_api
-  script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
 
 # if you're adding the shell to your own app, change this regex url to the URL
 # endpoint where you want the shell to run, e.g. /shell . You'll also probably
 # want to add login: admin to restrict to admins only.
-- url: .*
-  script: shell.py
+- url: /shell/.*
+  script: shell.main.app
+  login: admin
