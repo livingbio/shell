@@ -101,7 +101,7 @@ class Session(ndb.Model):
   these properties, so they don't need to be indexed.
   """
   global_names = ndb.TextProperty(repeated=True)
-  globals = ndb.BlobProperty(repeated=True)
+  globals = ndb.PickleProperty(repeated=True)
   unpicklable_names = ndb.TextProperty(repeated=True)
   unpicklables = ndb.TextProperty(repeated=True)
 
@@ -114,13 +114,13 @@ class Session(ndb.Model):
       name: the name of the global to remove
       value: any picklable value
     """
-    blob = ndb.Blob(pickle.dumps(value))
+    blob = value
 
     if name in self.global_names:
       index = self.global_names.index(name)
       self.globals[index] = blob
     else:
-      self.global_names.append(ndb.Text(name))
+      self.global_names.append(name)
       self.globals.append(blob)
 
     self.remove_unpicklable_name(name)
@@ -151,12 +151,12 @@ class Session(ndb.Model):
       statement: string, the statement that created new unpicklable global(s).
       names: list of strings; the names of the globals created by the statement.
     """
-    self.unpicklables.append(ndb.Text(statement))
+    self.unpicklables.append(statement)
 
     for name in names:
       self.remove_global(name)
       if name not in self.unpicklable_names:
-        self.unpicklable_names.append(ndb.Text(name))
+        self.unpicklable_names.append(name)
 
   def remove_unpicklable_name(self, name):
     """Removes a name from the list of unpicklable names, if it exists.
@@ -180,7 +180,7 @@ class FrontPageHandler(webapp2.RequestHandler):
     else:
       # create a new session
       session = Session()
-      session.unpicklables = [ndb.Text(line) for line in INITIAL_UNPICKLABLES]
+      session.unpicklables = [line for line in INITIAL_UNPICKLABLES]
       session_key = session.put()
 
 
