@@ -10,3 +10,8 @@ handlers:
   script: shell.main.app
   login: admin
 
+
+admin_console:
+  pages:
+  - name: Interactive Shell
+    url: /shell
