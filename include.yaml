@@ -1,6 +1,6 @@
 handlers:
 - url: /shell/static
-  static_dir: /shell/static
+  static_dir: shell/static
   expiration: "1d"
 
 # if you're adding the shell to your own app, change this regex url to the URL
