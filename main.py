@@ -105,7 +105,7 @@ class Session(ndb.Model):
   unpicklable_names = ndb.TextProperty(repeated=True)
   unpicklables = ndb.TextProperty(repeated=True)
 
-  def set_global(self, name, value):
+  def set_global(self, name, value):g
     """Adds a global, or updates it if it already exists.
 
     Also removes the global from the list of unpicklable names.
@@ -174,14 +174,14 @@ class FrontPageHandler(webapp2.RequestHandler):
 
   def get(self):
     # set up the session. TODO: garbage collect old shell sessions
-    session_key = self.request.get('session')
+    session_key = self.request.get_range('session')
     if session_key:
-      session = Session.get(session_key)
+      session = Session.get_by_id(session_key)
     else:
       # create a new session
       session = Session()
       session.unpicklables = [line for line in INITIAL_UNPICKLABLES]
-      session_key = session.put()
+      session_key = session.put().id()
 
 
     session_url = '/?session=%s' % session_key
@@ -234,7 +234,7 @@ class StatementHandler(webapp2.RequestHandler):
     statement_module.__builtins__ = __builtin__
 
     # load the session from the datastore
-    session = Session.get(self.request.get('session'))
+    session = Session.get_by_id(self.request.get_range('session'))
 
     # swap in our custom module for __main__. then unpickle the session
     # globals, run the statement, and re-pickle the session globals, all
